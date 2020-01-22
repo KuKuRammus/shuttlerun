@@ -153,6 +153,12 @@ class Game
         );
         this.canvasCtx.fill();
 
+        // Render sample text
+        this.canvasCtx.font = '30px monospace';
+        this.canvasCtx.fillStyle = this.orbit.color;
+        this.canvasCtx.textAlign = 'center';
+        this.canvasCtx.fillText('134,518,815', this.orbit.center.x, this.orbit.center.y + 9)
+
     }
 }
 
