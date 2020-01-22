@@ -1,6 +1,7 @@
 import './style.css'
 import { FIELD_WIDTH, FIELD_HEIGHT } from './constants/geometry'
+import Game from './Game'
 
-document.write(FIELD_WIDTH);
-document.write("x");
-document.write(FIELD_HEIGHT);
+const game = new Game();
+game.init(FIELD_WIDTH, FIELD_HEIGHT, document.querySelector('body'));
+

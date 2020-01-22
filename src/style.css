@@ -1,3 +1,15 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
 body {
     background-color: #EFF1F3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+canvas {
+    box-shadow: black;
 }
