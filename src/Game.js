@@ -14,25 +14,29 @@ class Game
     degreeToRadian = Math.PI / 180;
 
     // Orbit properties
-    orbitCenter = {
-        x: 0.0,
-        y: 0.0
+    orbit = {
+        center: {
+            x: 0.0,
+            y: 0.0
+        },
+        radius: 0.0,
+        thickness: 3,
+        color: '#272727'
     };
-    orbitRadius = 0.0;
-    orbitBorderWidth = 3;
-    orbitColor = '#272727';
 
     // Shuttle properties
-    shuttleDirection = -1;
-    shuttleRadius = 90.0;
-    shuttleColor = '#009fb7';
-    shuttleAngle = 0;
-    shuttleSpeed = 25;
+    shuttle = {
+        direction: -1,
+        radius: 0.0,
+        angle: 0.0,
+        speed: 20,
+        color: '#009fb7'
+    };
 
     // Obstacle
-    obstacleMinimalOffsetFromShuttle = Math.PI / 2.5;
-    obstacleColor = '#e31919';
     obstacle = {
+        minimalOffsetFromShuttle: Math.PI / 2.5,
+        color: '#e31919',
         angle: 0.0
     };
 
@@ -52,12 +56,12 @@ class Game
         this.canvasCtx = canvas.getContext('2d');
 
         // Calculate orbit position and diameter
-        this.orbitCenter.x = Math.round(width / 2);
-        this.orbitCenter.y = Math.round(height * 0.3);
-        this.orbitRadius = Math.round((width * 0.7) / 2);
+        this.orbit.center.x = Math.round(width / 2);
+        this.orbit.center.y = Math.round(height * 0.3);
+        this.orbit.radius = Math.round((width * 0.7) / 2);
 
         // Calculate shuttle size and set initial position
-        this.shuttleRadius = Math.round((width * 0.063) / 2);
+        this.shuttle.radius = Math.round((width * 0.063) / 2);
 
         // Create
         this.obstacle.angle = Math.random() * Math.PI * 2;
@@ -69,24 +73,24 @@ class Game
     handleKeyboardEvent(event) {
         switch (event.code) {
             case 'Space': {
-                this.shuttleDirection *= -1;
+                this.shuttle.direction *= -1;
             } break;
 
             case 'KeyR': {
-                this.shuttleAngle = 90 * this.degreeToRadian;
+                this.shuttle.angle = 90 * this.degreeToRadian;
             } break;
 
             case 'KeyS': {
-                this.shuttleDirection = 0;
+                this.shuttle.direction = 0;
             } break;
 
             case 'KeyL': {
-                this.shuttleDirection = 1;
+                this.shuttle.direction = 1;
             } break;
 
             case 'KeyO': {
-                const randomOffset = this.obstacleMinimalOffsetFromShuttle + (Math.random() * Math.PI / 2);
-                this.obstacle.angle = ((this.shuttleAngle + (randomOffset * this.shuttleDirection)) % (Math.PI * 2));
+                const randomOffset = this.obstacle.minimalOffsetFromShuttle + (Math.random() * Math.PI / 2);
+                this.obstacle.angle = ((this.shuttle.angle + (randomOffset * this.shuttle.direction)) % (Math.PI * 2));
             } break;
         }
     }
@@ -104,7 +108,7 @@ class Game
     }
 
     update(deltaTime) {
-        this.shuttleAngle += ((this.shuttleSpeed * deltaTime) * this.shuttleDirection) * this.degreeToRadian;
+        this.shuttle.angle += ((this.shuttle.speed * deltaTime) * this.shuttle.direction) * this.degreeToRadian;
     }
 
     render(deltaTime) {
@@ -112,42 +116,42 @@ class Game
         this.canvasCtx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
 
         // Render orbit
-        this.canvasCtx.lineWidth = this.orbitBorderWidth;
-        this.canvasCtx.strokeStyle = this.orbitColor;
+        this.canvasCtx.lineWidth = this.orbit.thickness;
+        this.canvasCtx.strokeStyle = this.orbit.color;
         this.canvasCtx.beginPath();
         this.canvasCtx.arc(
-            this.orbitCenter.x,
-            this.orbitCenter.y,
-            this.orbitRadius,
+            this.orbit.center.x,
+            this.orbit.center.y,
+            this.orbit.radius,
             0,
             Math.PI * 2
         );
         this.canvasCtx.stroke();
 
-        // Render shuttle
-        this.canvasCtx.fillStyle = this.shuttleColor;
-        this.canvasCtx.beginPath();
-        this.canvasCtx.arc(
-            this.orbitCenter.x + Math.cos(this.shuttleAngle) * this.orbitRadius,
-            this.orbitCenter.y + Math.sin(this.shuttleAngle) * this.orbitRadius,
-            this.shuttleRadius,
-            0,
-            Math.PI * 2
-        );
-        this.canvasCtx.fill();
-
         // Render obstacle
         this.canvasCtx.save();
-        this.canvasCtx.fillStyle = this.obstacleColor;
+        this.canvasCtx.fillStyle = this.obstacle.color;
         this.canvasCtx.beginPath();
         this.canvasCtx.translate(
-            this.orbitCenter.x + Math.cos(this.obstacle.angle) * this.orbitRadius,
-            this.orbitCenter.y + Math.sin(this.obstacle.angle) * this.orbitRadius
+            this.orbit.center.x + Math.cos(this.obstacle.angle) * this.orbit.radius,
+            this.orbit.center.y + Math.sin(this.obstacle.angle) * this.orbit.radius
         );
         this.canvasCtx.rotate(this.obstacle.angle);
         this.canvasCtx.rect(0 - 18, 0 - 6, 36, 6);
         this.canvasCtx.fill();
         this.canvasCtx.restore();
+
+        // Render shuttle
+        this.canvasCtx.fillStyle = this.shuttle.color;
+        this.canvasCtx.beginPath();
+        this.canvasCtx.arc(
+            this.orbit.center.x + Math.cos(this.shuttle.angle) * this.orbit.radius,
+            this.orbit.center.y + Math.sin(this.shuttle.angle) * this.orbit.radius,
+            this.shuttle.radius,
+            0,
+            Math.PI * 2
+        );
+        this.canvasCtx.fill();
 
     }
 }
