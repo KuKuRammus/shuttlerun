@@ -37,7 +37,21 @@ class Game
     obstacle = {
         minimalOffsetFromShuttle: Math.PI / 2.5,
         color: '#e31919',
-        angle: 0.0
+        angle: 0.0,
+        dimensions: {
+            x: 0.0,
+            y: 0.0
+        }
+    };
+
+    // Scoreboard
+    scoreboard = {
+        position: {
+            x: 0.0,
+            y: 0.0
+        },
+        fontStyle: '',
+        color: '#272727'
     };
 
     constructor() {}
@@ -63,7 +77,16 @@ class Game
         // Calculate shuttle size and set initial position
         this.shuttle.radius = Math.round((width * 0.063) / 2);
 
-        // Create
+        // Calculate obstacle size
+        this.obstacle.dimensions.x = this.orbit.radius * 0.22;
+        this.obstacle.dimensions.y = this.orbit.radius * 0.03;
+
+        // Calculate scoreboard position
+        this.scoreboard.position.x = this.orbit.center.x;
+        this.scoreboard.position.y = this.orbit.center.y + Math.round(this.orbit.radius * 0.16 / 3);
+        this.scoreboard.fontStyle = `${Math.round(this.orbit.radius * 0.16)}px Overpass Mono`;
+
+        // Create obstacle
         this.obstacle.angle = Math.random() * Math.PI * 2;
 
         // Register handle for keyboard events
@@ -77,7 +100,7 @@ class Game
             } break;
 
             case 'KeyR': {
-                this.shuttle.angle = 90 * this.degreeToRadian;
+                this.shuttle.angle = 0;
             } break;
 
             case 'KeyS': {
@@ -109,6 +132,11 @@ class Game
 
     update(deltaTime) {
         this.shuttle.angle += ((this.shuttle.speed * deltaTime) * this.shuttle.direction) * this.degreeToRadian;
+        if (this.shuttle.angle > (Math.PI * 2)) {
+            this.shuttle.angle = this.shuttle.angle % (Math.PI * 2);
+        } else if (this.shuttle.angle < -(Math.PI * 2)) {
+            this.shuttle.angle = -(this.shuttle.angle % (Math.PI * 2));
+        }
     }
 
     render(deltaTime) {
@@ -137,7 +165,12 @@ class Game
             this.orbit.center.y + Math.sin(this.obstacle.angle) * this.orbit.radius
         );
         this.canvasCtx.rotate(this.obstacle.angle);
-        this.canvasCtx.rect(0 - 18, 0 - 6, 36, 6);
+        this.canvasCtx.rect(
+            0 - this.obstacle.dimensions.x / 2,
+            0 - this.obstacle.dimensions.y / 2,
+            this.obstacle.dimensions.x,
+            this.obstacle.dimensions.y
+        );
         this.canvasCtx.fill();
         this.canvasCtx.restore();
 
@@ -154,10 +187,14 @@ class Game
         this.canvasCtx.fill();
 
         // Render sample text
-        this.canvasCtx.font = '30px monospace';
-        this.canvasCtx.fillStyle = this.orbit.color;
+        this.canvasCtx.font = this.scoreboard.fontStyle;
+        this.canvasCtx.fillStyle = this.scoreboard.color;
         this.canvasCtx.textAlign = 'center';
-        this.canvasCtx.fillText('134,518,815', this.orbit.center.x, this.orbit.center.y + 9)
+        this.canvasCtx.fillText(
+            '134,518,815',
+            this.scoreboard.position.x,
+            this.scoreboard.position.y
+        );
 
     }
 }
