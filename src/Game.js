@@ -63,12 +63,6 @@ class Game
         score: 0
     };
 
-    // Collisions
-    collision = {
-        distance: 0.0,
-        isCollides: false
-    };
-
     // Sounds
     sound = {
         hit: {
@@ -114,10 +108,7 @@ class Game
         this.scoreboard.fontStyle = `${Math.round(this.orbit.radius * 0.16)}px Overpass Mono`;
         this.scoreboard.text = 'no collision';
 
-        // Set collision detection properties
-        this.collision.distance = this.shuttle.angularSize;
-
-        // Create obstaclecollisionAngleIncrease
+        // Create obstacle
         this.generateObstacle();
 
         // Load sounds
@@ -125,36 +116,20 @@ class Game
         this.sound.hit.right = new Howl({ src: [soundHitRight], volume: this.sound.settings.volume });
 
         // Register handle for keyboard events
-        window.addEventListener('keyup', this.handleKeyboardEvent.bind(this));
+        window.addEventListener('keydown', this.handleKeydownEvent.bind(this));
     }
 
-    handleKeyboardEvent(event) {
-        switch (event.code) {
-            case 'Space': {
-                if (this.collision.isCollides) {
-                    this.scoreboard.score += 1;
-                    this.shuttle.speed += 10;
-                    this.shuttle.direction *= -1;
+    handleKeydownEvent(event) {
+        if (!event.repeat) {
+            switch (event.code) {
+                case 'ArrowLeft': {
                     this.sound.hit.left.play();
-                    this.generateObstacle()
-                }
-            } break;
+                } break;
 
-            case 'KeyR': {
-                this.shuttle.angle = 0;
-            } break;
-
-            case 'KeyS': {
-                this.shuttle.direction = 0;
-            } break;
-
-            case 'KeyL': {
-                this.shuttle.direction = 1;
-            } break;
-
-            case 'KeyO': {
-                this.generateObstacle()
-            } break;
+                case 'ArrowRight': {
+                    this.sound.hit.right.play();
+                } break;
+            }
         }
     }
 
@@ -176,17 +151,12 @@ class Game
     }
 
     update(deltaTime) {
-        const previousFrameShuttleAngle = this.shuttle.angle;
         this.shuttle.angle += ((this.shuttle.speed * deltaTime) * this.shuttle.direction) * this.degreeToRadian;
-        const collisionAngleIncrease = Math.abs(previousFrameShuttleAngle - this.shuttle.angle);
         if (this.shuttle.angle > (Math.PI * 2)) {
             this.shuttle.angle = this.shuttle.angle % (Math.PI * 2);
         } else if (this.shuttle.angle < -(Math.PI * 2)) {
             this.shuttle.angle = -(this.shuttle.angle % (Math.PI * 2));
         }
-
-        // Collision detection
-        this.collision.isCollides = Math.abs(this.shuttle.angle - this.obstacle.angle) < this.collision.distance + collisionAngleIncrease;
     }
 
     render(deltaTime) {
