@@ -101,7 +101,7 @@ class Game
         this.collision.distance = this.shuttle.angularSize;
 
         // Create obstacle
-        this.obstacle.angle = Math.random() * Math.PI * 2;
+        this.generateObstacle();
 
         // Register handle for keyboard events
         window.addEventListener('keyup', this.handleKeyboardEvent.bind(this));
@@ -154,6 +154,7 @@ class Game
     }
 
     update(deltaTime) {
+        const previousFrameShuttleAngle = this.shuttle.angle;
         this.shuttle.angle += ((this.shuttle.speed * deltaTime) * this.shuttle.direction) * this.degreeToRadian;
         if (this.shuttle.angle > (Math.PI * 2)) {
             this.shuttle.angle = this.shuttle.angle % (Math.PI * 2);
