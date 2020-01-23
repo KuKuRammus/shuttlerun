@@ -4,8 +4,17 @@ import { Howl, Howler } from 'howler'
 import soundHitLeft from './media/sounds/hit/left.mp3'
 import soundHitRight from './media/sounds/hit/right.mp3'
 
+// Load song and beatmap info
+import songFile from './media/song/song.mp3'
+import songInfo from './media/song/songinfo'
+
 class Game
 {
+    // Game state
+    STATE_INIT = 0;
+    STATE_RUN = 1;
+    state = 0;
+
     // Canvas drawing 2D context
     /** @type {RenderingContext|null} canvasCtx */
     canvasCtx = null;
@@ -35,7 +44,7 @@ class Game
         direction: -1,
         radius: 0.0,
         angle: 0.0,
-        speed: 20,
+        speed: 37.5,
         color: '#009fb7',
         angularSize: 0.0
     };
@@ -49,6 +58,15 @@ class Game
             x: 0.0,
             y: 0.0
         }
+    };
+
+    // Hitboxes
+    noteblock = {
+        color: {
+            left: '#ccc',
+            right: '#ddd'
+        },
+        size: { x: 0, y: 0 }
     };
 
     // Scoreboard
@@ -74,6 +92,15 @@ class Game
         }
     };
 
+    // Internal stopwatch
+    stopwatch = 0;
+
+    // Loaded song
+    beatmap = {
+        audio: null,
+        info: null
+    };
+
     constructor() {}
 
     init(width, height, rootElement) {
@@ -95,12 +122,13 @@ class Game
         this.orbit.radius = Math.round((width * 0.7) / 2);
 
         // Calculate shuttle size (+ angular size) and set initial position
+        this.shuttle.angle = 90.0 * this.degreeToRadian;
         this.shuttle.radius = Math.round((width * 0.063) / 2);
         this.shuttle.angularSize = (this.shuttle.radius * 2 * 47) / this.orbit.radius * this.degreeToRadian;
 
-        // Calculate obstacle size
-        this.obstacle.dimensions.x = this.orbit.radius * 0.22;
-        this.obstacle.dimensions.y = this.orbit.radius * 0.03;
+        // Calculate note block size
+        this.noteblock.size.x = this.orbit.radius * 0.15;
+        this.noteblock.size.y = this.orbit.radius * 0.15;
 
         // Calculate scoreboard position
         this.scoreboard.position.x = this.orbit.center.x;
@@ -114,6 +142,12 @@ class Game
         // Load sounds
         this.sound.hit.left = new Howl({ src: [soundHitLeft], volume: this.sound.settings.volume });
         this.sound.hit.right = new Howl({ src: [soundHitRight], volume: this.sound.settings.volume });
+
+        // Load song info
+        this.beatmap.audio = new Howl({ src: [songFile], volume: this.sound.settings.volume - 0.1 });
+        this.beatmap.info = songInfo;
+
+        this.shuttle.speed = 6000 / this.beatmap.info.meta.bpm;
 
         // Register handle for keyboard events
         window.addEventListener('keydown', this.handleKeydownEvent.bind(this));
@@ -131,12 +165,17 @@ class Game
                 } break;
             }
         }
+        event.preventDefault();
+        event.stopPropagation();
     }
 
     tick() {
         window.requestAnimationFrame(this.tick.bind(this));
 
         this.currentTime = (new Date()).getTime();
+        if (this.lastTime === 0) {
+            this.lastTime = (new Date()).getTime();
+        }
         const deltaTime = (this.currentTime - this.lastTime) / 1000;
 
         this.update(deltaTime);
@@ -152,10 +191,14 @@ class Game
 
     update(deltaTime) {
         this.shuttle.angle += ((this.shuttle.speed * deltaTime) * this.shuttle.direction) * this.degreeToRadian;
-        if (this.shuttle.angle > (Math.PI * 2)) {
-            this.shuttle.angle = this.shuttle.angle % (Math.PI * 2);
-        } else if (this.shuttle.angle < -(Math.PI * 2)) {
-            this.shuttle.angle = -(this.shuttle.angle % (Math.PI * 2));
+
+        if (this.state === this.STATE_INIT && (this.shuttle.angle < Math.PI / 2 * -1)) {
+            this.state = this.STATE_RUN;
+            // this.beatmap.audio.play();
+        }
+
+        if (this.state === this.STATE_RUN) {
+            this.stopwatch += deltaTime;
         }
     }
 
@@ -176,9 +219,9 @@ class Game
         );
         this.canvasCtx.stroke();
 
-        // Render obstacle
+        // Render noteblock
         this.canvasCtx.save();
-        this.canvasCtx.fillStyle = this.obstacle.color;
+        this.canvasCtx.fillStyle = this.noteblock.color.left;
         this.canvasCtx.beginPath();
         this.canvasCtx.translate(
             this.orbit.center.x + Math.cos(this.obstacle.angle) * this.orbit.radius,
@@ -186,10 +229,10 @@ class Game
         );
         this.canvasCtx.rotate(this.obstacle.angle);
         this.canvasCtx.rect(
-            0 - this.obstacle.dimensions.x / 2,
-            0 - this.obstacle.dimensions.y / 2,
-            this.obstacle.dimensions.x,
-            this.obstacle.dimensions.y
+            0 - this.noteblock.size.x / 2,
+            0 - this.noteblock.size.y / 2,
+            this.noteblock.size.x,
+            this.noteblock.size.y
         );
         this.canvasCtx.fill();
         this.canvasCtx.restore();
@@ -211,7 +254,7 @@ class Game
         this.canvasCtx.fillStyle = this.scoreboard.color;
         this.canvasCtx.textAlign = 'center';
         this.canvasCtx.fillText(
-            this.scoreboard.score,
+            this.stopwatch.toFixed(4),
             this.scoreboard.position.x,
             this.scoreboard.position.y
         );
