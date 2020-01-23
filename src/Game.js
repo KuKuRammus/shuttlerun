@@ -1,3 +1,9 @@
+import { Howl, Howler } from 'howler'
+
+// Resources / Sound / Hit
+import soundHitLeft from './media/sounds/hit/left.mp3'
+import soundHitRight from './media/sounds/hit/right.mp3'
+
 class Game
 {
     // Canvas drawing 2D context
@@ -29,7 +35,7 @@ class Game
         direction: -1,
         radius: 0.0,
         angle: 0.0,
-        speed: 10,
+        speed: 20,
         color: '#009fb7',
         angularSize: 0.0
     };
@@ -61,6 +67,17 @@ class Game
     collision = {
         distance: 0.0,
         isCollides: false
+    };
+
+    // Sounds
+    sound = {
+        hit: {
+            left: null,
+            right: null
+        },
+        settings: {
+            volume: 0.15
+        }
     };
 
     constructor() {}
@@ -100,8 +117,12 @@ class Game
         // Set collision detection properties
         this.collision.distance = this.shuttle.angularSize;
 
-        // Create obstacle
+        // Create obstaclecollisionAngleIncrease
         this.generateObstacle();
+
+        // Load sounds
+        this.sound.hit.left = new Howl({ src: [soundHitLeft], volume: this.sound.settings.volume });
+        this.sound.hit.right = new Howl({ src: [soundHitRight], volume: this.sound.settings.volume });
 
         // Register handle for keyboard events
         window.addEventListener('keyup', this.handleKeyboardEvent.bind(this));
@@ -114,6 +135,7 @@ class Game
                     this.scoreboard.score += 1;
                     this.shuttle.speed += 10;
                     this.shuttle.direction *= -1;
+                    this.sound.hit.left.play();
                     this.generateObstacle()
                 }
             } break;
@@ -156,6 +178,7 @@ class Game
     update(deltaTime) {
         const previousFrameShuttleAngle = this.shuttle.angle;
         this.shuttle.angle += ((this.shuttle.speed * deltaTime) * this.shuttle.direction) * this.degreeToRadian;
+        const collisionAngleIncrease = Math.abs(previousFrameShuttleAngle - this.shuttle.angle);
         if (this.shuttle.angle > (Math.PI * 2)) {
             this.shuttle.angle = this.shuttle.angle % (Math.PI * 2);
         } else if (this.shuttle.angle < -(Math.PI * 2)) {
@@ -163,7 +186,7 @@ class Game
         }
 
         // Collision detection
-        this.collision.isCollides = Math.abs(this.shuttle.angle - this.obstacle.angle) < this.collision.distance;
+        this.collision.isCollides = Math.abs(this.shuttle.angle - this.obstacle.angle) < this.collision.distance + collisionAngleIncrease;
     }
 
     render(deltaTime) {
