@@ -29,8 +29,9 @@ class Game
         direction: -1,
         radius: 0.0,
         angle: 0.0,
-        speed: 20,
-        color: '#009fb7'
+        speed: 10,
+        color: '#009fb7',
+        angularSize: 0.0
     };
 
     // Obstacle
@@ -51,7 +52,15 @@ class Game
             y: 0.0
         },
         fontStyle: '',
-        color: '#272727'
+        color: '#272727',
+        text: '',
+        score: 0
+    };
+
+    // Collisions
+    collision = {
+        distance: 0.0,
+        isCollides: false
     };
 
     constructor() {}
@@ -74,8 +83,9 @@ class Game
         this.orbit.center.y = Math.round(height * 0.3);
         this.orbit.radius = Math.round((width * 0.7) / 2);
 
-        // Calculate shuttle size and set initial position
+        // Calculate shuttle size (+ angular size) and set initial position
         this.shuttle.radius = Math.round((width * 0.063) / 2);
+        this.shuttle.angularSize = (this.shuttle.radius * 2 * 47) / this.orbit.radius * this.degreeToRadian;
 
         // Calculate obstacle size
         this.obstacle.dimensions.x = this.orbit.radius * 0.22;
@@ -85,6 +95,10 @@ class Game
         this.scoreboard.position.x = this.orbit.center.x;
         this.scoreboard.position.y = this.orbit.center.y + Math.round(this.orbit.radius * 0.16 / 3);
         this.scoreboard.fontStyle = `${Math.round(this.orbit.radius * 0.16)}px Overpass Mono`;
+        this.scoreboard.text = 'no collision';
+
+        // Set collision detection properties
+        this.collision.distance = this.shuttle.angularSize;
 
         // Create obstacle
         this.obstacle.angle = Math.random() * Math.PI * 2;
@@ -96,7 +110,12 @@ class Game
     handleKeyboardEvent(event) {
         switch (event.code) {
             case 'Space': {
-                this.shuttle.direction *= -1;
+                if (this.collision.isCollides) {
+                    this.scoreboard.score += 1;
+                    this.shuttle.speed += 10;
+                    this.shuttle.direction *= -1;
+                    this.generateObstacle()
+                }
             } break;
 
             case 'KeyR': {
@@ -112,8 +131,7 @@ class Game
             } break;
 
             case 'KeyO': {
-                const randomOffset = this.obstacle.minimalOffsetFromShuttle + (Math.random() * Math.PI / 2);
-                this.obstacle.angle = ((this.shuttle.angle + (randomOffset * this.shuttle.direction)) % (Math.PI * 2));
+                this.generateObstacle()
             } break;
         }
     }
@@ -130,6 +148,11 @@ class Game
         this.lastTime = this.currentTime;
     }
 
+    generateObstacle() {
+        const randomOffset = this.obstacle.minimalOffsetFromShuttle + (Math.random() * Math.PI / 2);
+        this.obstacle.angle = ((this.shuttle.angle + (randomOffset * this.shuttle.direction)) % (Math.PI * 2));
+    }
+
     update(deltaTime) {
         this.shuttle.angle += ((this.shuttle.speed * deltaTime) * this.shuttle.direction) * this.degreeToRadian;
         if (this.shuttle.angle > (Math.PI * 2)) {
@@ -137,6 +160,9 @@ class Game
         } else if (this.shuttle.angle < -(Math.PI * 2)) {
             this.shuttle.angle = -(this.shuttle.angle % (Math.PI * 2));
         }
+
+        // Collision detection
+        this.collision.isCollides = Math.abs(this.shuttle.angle - this.obstacle.angle) < this.collision.distance;
     }
 
     render(deltaTime) {
@@ -191,7 +217,7 @@ class Game
         this.canvasCtx.fillStyle = this.scoreboard.color;
         this.canvasCtx.textAlign = 'center';
         this.canvasCtx.fillText(
-            '134,518,815',
+            this.scoreboard.score,
             this.scoreboard.position.x,
             this.scoreboard.position.y
         );
