@@ -30,9 +30,8 @@ class Game
         direction: -1,
         radius: 0.0,
         angle: 0.0,
-        speed: 37.5,
+        speed: 0,
         color: '#009fb7',
-        angularSize: 0.0
     };
 
     // Scoreboard
@@ -57,7 +56,9 @@ class Game
             fill: '#eff1f3'
         },
         radius: 12,
-        angle: 0.0
+        angle: 0.0,
+        angularRadius: 0.0,
+        minimalOffsetFromShuttle: Math.PI / 2.5
     };
 
     normalizeRadianAngle(angle) {
@@ -93,7 +94,7 @@ class Game
         // Calculate shuttle size (+ angular size) and set initial position
         this.shuttle.angle = 90.0 * this.degreeToRadian;
         this.shuttle.radius = Math.round((width * 0.063) / 2);
-        this.shuttle.angularSize = (this.shuttle.radius * 2 * 47) / this.orbit.radius * this.degreeToRadian;
+        this.setShuttleSpeed(30);
 
         // Calculate scoreboard position
         this.scoreboard.position.x = this.orbit.center.x;
@@ -103,6 +104,7 @@ class Game
 
         // Calculate obstacle properties
         this.obstacle.radius = this.orbit.radius * 0.142;
+        this.obstacle.angularRadius = Math.atan((this.obstacle.radius * 2) / this.orbit.radius) * 0.6;
 
         // Regenerate obstacle
         this.regenerateObstacle();
@@ -111,10 +113,14 @@ class Game
         window.addEventListener('keydown', this.handleKeydownEvent.bind(this));
     }
 
+    setShuttleSpeed(degree) {
+        this.shuttle.speed = degree * this.degreeToRadian;
+    }
+
     regenerateObstacle() {
-        const { obstacle, shuttle, doublePi } = this;
+        const randomOffsetFromShuttle = this.obstacle.minimalOffsetFromShuttle + (Math.random() * Math.PI / 2);
         this.obstacle.angle = this.normalizeRadianAngle(
-            shuttle.angle + (Math.random() * doublePi)
+            this.shuttle.angle + randomOffsetFromShuttle * this.shuttle.direction
         );
     }
 
@@ -127,7 +133,19 @@ class Game
                     // TODO
                 } break;
 
+                case 'ArrowUp': {
+                    this.shuttle.speed += 5 * this.degreeToRadian;
+                } break;
+
+                case 'ArrowDown': {
+                    this.shuttle.speed -= 5 * this.degreeToRadian;
+                } break;
+
                 case 'ArrowRight': {
+                    // TODO
+                } break;
+
+                case 'KeyX': {
                     // TODO
                 } break;
 
@@ -155,9 +173,17 @@ class Game
     }
 
     update(deltaTime) {
-        this.shuttle.angle += this.normalizeRadianAngle(
-            this.shuttle.speed * deltaTime * this.shuttle.direction * this.degreeToRadian
-        );
+        const angleFrameChange = this.shuttle.speed * deltaTime * this.shuttle.direction;
+        this.shuttle.angle = this.normalizeRadianAngle(this.shuttle.angle + angleFrameChange);
+
+        // Temp collision check
+        const distanceToObstacle = Math.abs(this.shuttle.angle - this.obstacle.angle) + Math.abs(angleFrameChange);
+        if (distanceToObstacle < this.obstacle.angularRadius) {
+            this.scoreboard.text = `+c (${(this.shuttle.speed * this.radianToDegree).toFixed(2)})`;
+        } else {
+            this.scoreboard.text = `-c (${(this.shuttle.speed * this.radianToDegree).toFixed(2)})`;
+        }
+
     }
 
     render(deltaTime) {
@@ -208,7 +234,7 @@ class Game
         this.canvasCtx.fillStyle = this.scoreboard.color;
         this.canvasCtx.textAlign = 'center';
         this.canvasCtx.fillText(
-            this.stopwatch.toFixed(4),
+            this.scoreboard.text,
             this.scoreboard.position.x,
             this.scoreboard.position.y
         );
