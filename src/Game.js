@@ -12,6 +12,7 @@ class Game
     // Misc
     radianToDegree = 180 / Math.PI;
     degreeToRadian = Math.PI / 180;
+    doublePi = Math.PI * 2;
 
     // Orbit properties
     orbit = {
@@ -49,6 +50,25 @@ class Game
     // Internal stopwatch
     stopwatch = 0;
 
+    // Obstacle
+    obstacle = {
+        color: {
+            border: '#272727',
+            fill: '#eff1f3'
+        },
+        radius: 12,
+        angle: 0.0
+    };
+
+    normalizeRadianAngle(angle) {
+        if (angle > this.doublePi) {
+            return angle % this.doublePi;
+        } else if (angle < -this.doublePi) {
+            return -(angle % this.doublePi);
+        }
+        return angle;
+    }
+
     constructor() {}
 
     init(width, height, rootElement) {
@@ -68,6 +88,7 @@ class Game
         this.orbit.center.x = Math.round(width / 2);
         this.orbit.center.y = Math.round(height * 0.3);
         this.orbit.radius = Math.round((width * 0.7) / 2);
+        this.orbit.thickness = Math.ceil(this.orbit.radius * 0.0157);
 
         // Calculate shuttle size (+ angular size) and set initial position
         this.shuttle.angle = 90.0 * this.degreeToRadian;
@@ -80,11 +101,26 @@ class Game
         this.scoreboard.fontStyle = `${Math.round(this.orbit.radius * 0.16)}px Overpass Mono`;
         this.scoreboard.text = 'no collision';
 
+        // Calculate obstacle properties
+        this.obstacle.radius = this.orbit.radius * 0.142;
+
+        // Regenerate obstacle
+        this.regenerateObstacle();
+
         // Register handle for keyboard events
         window.addEventListener('keydown', this.handleKeydownEvent.bind(this));
     }
 
+    regenerateObstacle() {
+        const { obstacle, shuttle, doublePi } = this;
+        this.obstacle.angle = this.normalizeRadianAngle(
+            shuttle.angle + (Math.random() * doublePi)
+        );
+    }
+
     handleKeydownEvent(event) {
+        event.preventDefault();
+        event.stopPropagation();
         if (!event.repeat) {
             switch (event.code) {
                 case 'ArrowLeft': {
@@ -94,10 +130,13 @@ class Game
                 case 'ArrowRight': {
                     // TODO
                 } break;
+
+                case 'KeyO': {
+                    // Regenerate obstacle
+                    this.regenerateObstacle();
+                } break;
             }
         }
-        event.preventDefault();
-        event.stopPropagation();
     }
 
     tick() {
@@ -116,7 +155,9 @@ class Game
     }
 
     update(deltaTime) {
-        this.shuttle.angle += ((this.shuttle.speed * deltaTime) * this.shuttle.direction) * this.degreeToRadian;
+        this.shuttle.angle += this.normalizeRadianAngle(
+            this.shuttle.speed * deltaTime * this.shuttle.direction * this.degreeToRadian
+        );
     }
 
     render(deltaTime) {
@@ -134,6 +175,20 @@ class Game
             0,
             Math.PI * 2
         );
+        this.canvasCtx.stroke();
+
+        // Render obstacle
+        this.canvasCtx.fillStyle = this.obstacle.color.fill;
+        this.canvasCtx.strokeStyle = this.obstacle.color.border;
+        this.canvasCtx.beginPath();
+        this.canvasCtx.arc(
+            this.orbit.center.x + Math.cos(this.obstacle.angle) * this.orbit.radius,
+            this.orbit.center.y + Math.sin(this.obstacle.angle) * this.orbit.radius,
+            this.obstacle.radius,
+            0,
+            this.doublePi
+        );
+        this.canvasCtx.fill();
         this.canvasCtx.stroke();
 
         // Render shuttle
