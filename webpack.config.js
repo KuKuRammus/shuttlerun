@@ -40,7 +40,7 @@ module.exports = {
         new HtmlWebpackPlugin({
             title: 'ShuttleRun Game',
             meta: {
-                viewport: 'width=device-width'
+                viewport: 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=3'
             }
         }),
         new MiniCssExtractPlugin({
