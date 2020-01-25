@@ -1,5 +1,12 @@
 class Game
 {
+
+    // Game state
+    STATE_INIT = 1;
+    STATE_RUNNING = 2;
+    STATE_GAME_OVER = 3;
+    state = this.STATE_INIT;
+
     // Canvas drawing 2D context
     /** @type {RenderingContext|null} canvasCtx */
     canvasCtx = null;
@@ -30,7 +37,9 @@ class Game
         direction: -1,
         radius: 0.0,
         angle: 0.0,
+        initialSpeed: 50 * this.degreeToRadian,
         speed: 0,
+        speedIncrease: 2 * this.degreeToRadian,
         color: '#009fb7',
         approachTriggerAngularRadius: 0.0,
         approachCircleRadius: 0.0,
@@ -44,15 +53,23 @@ class Game
             x: 0.0,
             y: 0.0
         },
-        fontStyle: '',
+        fontStylePrimary: '',
+        fontStyleSecondary: '',
         color: '#272727',
-        text: '',
-        score: 0.0,
-        perfectHitScore: 300
+        score: 0,
+        timeRemaining: 0.0,
+        timeIncrement: 5.0,
+        text: {
+            top: '',
+            middle: '0',
+            bottom: '00:00:0000',
+        },
+        textOffsetY: {
+            top: 10.0,
+            middle: 0.0,
+            bottom: 20.0
+        }
     };
-
-    // Internal stopwatch
-    stopwatch = 0;
 
     // Obstacle
     obstacle = {
@@ -69,6 +86,15 @@ class Game
     // Collision
     collision = {
         collides: false
+    };
+
+    // Interface text
+    text = {
+        scoreboard: {
+            init: 'Click/Spacebar to start',
+            running: 'Score',
+            gameOver: 'Game over'
+        }
     };
 
     normalizeRadianAngle(angle) {
@@ -104,24 +130,28 @@ class Game
         // Calculate shuttle size (+ angular size) and set initial position
         this.shuttle.angle = 90.0 * this.degreeToRadian;
         this.shuttle.radius = Math.round((width * 0.063) / 2);
-        this.shuttle.approachTriggerAngularRadius = Maxth.atan((this.shuttle.radius * 2) / this.shuttle.radius) / 2.5;
+        this.shuttle.approachTriggerAngularRadius = Math.atan((this.shuttle.radius * 2) / this.shuttle.radius) / 2;
         this.setShuttleSpeed(30);
 
         // Calculate scoreboard position
         this.scoreboard.position.x = this.orbit.center.x;
         this.scoreboard.position.y = this.orbit.center.y + Math.round(this.orbit.radius * 0.16 / 3);
-        this.scoreboard.fontStyle = `${Math.round(this.orbit.radius * 0.16)}px Overpass Mono`;
-        this.scoreboard.text = 'no collision';
+        this.scoreboard.fontStylePrimary = `${Math.round(this.orbit.radius * 0.16)}px Overpass Mono`;
+        this.scoreboard.fontStyleSecondary = `${Math.round(this.orbit.radius * 0.1)}px Overpass Mono`;
+        this.scoreboard.textOffsetY.top = -(Math.round(this.orbit.radius * 0.1) * 2);
+        this.scoreboard.textOffsetY.bottom = Math.round(this.orbit.radius * 0.1) * 1.5;
 
         // Calculate obstacle properties
         this.obstacle.radius = this.orbit.radius * 0.142;
         this.obstacle.angularRadius = Math.atan((this.obstacle.radius * 2) / this.orbit.radius) * 0.6;
 
-        // Regenerate obstacle
-        this.regenerateObstacle();
+        this.transitionToInitState();
 
         // Register handle for keyboard events
         window.addEventListener('keydown', this.handleKeydownEvent.bind(this));
+
+        // Register handle for keyboard events
+        window.addEventListener('mousedown', this.handleMouseClick.bind(this));
     }
 
     setShuttleSpeed(degree) {
@@ -135,15 +165,88 @@ class Game
         );
     }
 
+    handleInputHit() {
+        switch (this.state) {
+
+            case this.STATE_INIT: {
+                this.transitionToRunningState();
+            } break;
+
+            case this.STATE_RUNNING: {
+                // Collision check
+                if (this.collision.collides) {
+                    this.shuttle.direction *= -1;
+                    this.regenerateObstacle();
+                    this.setScore(this.scoreboard.score + parseInt(this.shuttle.speed * 100));
+                    this.setTimeRemaining(this.scoreboard.timeRemaining + this.scoreboard.timeIncrement);
+
+                    // Increase speed
+                    this.shuttle.speed += this.shuttle.speedIncrease;
+                }
+            } break;
+
+            case this.STATE_GAME_OVER: {
+                this.transitionToInitState();
+            } break;
+
+        }
+    }
+
+    handleMouseClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        this.handleInputHit();
+    }
+
+    setScore(score) {
+        this.scoreboard.score = score;
+        this.scoreboard.text.middle = score.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+    }
+
+    setTimeRemaining(time) {
+
+        this.scoreboard.timeRemaining = time;
+
+        if (time <= 0) {
+            this.scoreboard.text.bottom = '00:00,000';
+            return;
+        }
+
+        const pad = function(num, size) { return ('000' + num).slice(size * -1); },
+            tempTime = parseFloat(time).toFixed(3),
+            minutes = Math.floor(tempTime / 60) % 60,
+            seconds = Math.floor(tempTime - minutes * 60),
+            milliseconds = tempTime.slice(-3);
+        this.scoreboard.text.bottom = pad(minutes, 2) + ':' + pad(seconds, 2) + ',' + pad(milliseconds, 3);
+    }
+
+    transitionToInitState() {
+        this.state = this.STATE_INIT;
+        this.scoreboard.text.top = this.text.scoreboard.init;
+        this.shuttle.angle = Math.PI / 2;
+        this.setTimeRemaining(15.0);
+        this.setScore(0)
+    }
+
+    transitionToRunningState() {
+        this.state = this.STATE_RUNNING;
+        this.shuttle.speed = this.shuttle.initialSpeed;
+        this.regenerateObstacle();
+        this.scoreboard.text.top = this.text.scoreboard.running;
+    }
+
+    transitionToGameOverState() {
+        this.state = this.STATE_GAME_OVER;
+        this.scoreboard.text.top = this.text.scoreboard.gameOver;
+        this.shuttle.speed = 0.0;
+    }
+
     handleKeydownEvent(event) {
         event.preventDefault();
         event.stopPropagation();
         if (!event.repeat) {
             switch (event.code) {
-                case 'ArrowLeft': {
-                    // TODO
-                } break;
-
                 case 'ArrowUp': {
                     this.shuttle.speed += 5 * this.degreeToRadian;
                 } break;
@@ -152,16 +255,9 @@ class Game
                     this.shuttle.speed -= 5 * this.degreeToRadian;
                 } break;
 
-                case 'ArrowRight': {
-                    // TODO
-                } break;
-
-                case 'KeyX': {
+                case 'Space': {
                     // Temp collision check
-                    if (this.collision.collides) {
-                        this.shuttle.direction *= -1;
-                        this.regenerateObstacle();
-                    }
+                    this.handleInputHit()
                 } break;
 
                 case 'KeyO': {
@@ -188,23 +284,36 @@ class Game
     }
 
     update(deltaTime) {
-        const angleFrameChange = this.shuttle.speed * deltaTime * this.shuttle.direction;
-        this.shuttle.angle = this.normalizeRadianAngle(this.shuttle.angle + angleFrameChange);
+        switch (this.state) {
+            case this.STATE_INIT: {} break;
 
-        const distanceToObstacle = Math.abs(Math.atan2(
-            Math.sin(this.shuttle.angle - this.obstacle.angle),
-            Math.cos(this.shuttle.angle - this.obstacle.angle)
-        ));
-        this.collision.collides = (distanceToObstacle < this.obstacle.angularRadius);
-        this.shuttle.approachCircleRadius = distanceToObstacle * (this.shuttle.radius * 10);
+            case this.STATE_RUNNING: {
+                const angleFrameChange = this.shuttle.speed * deltaTime * this.shuttle.direction;
+                this.shuttle.angle = this.normalizeRadianAngle(this.shuttle.angle + angleFrameChange);
 
-        if (distanceToObstacle > this.shuttle.approachTriggerAngularRadius) {
-            this.shuttle.approachCircleOpacity = 0.0;
-        } else {
-            this.shuttle.approachCircleOpacity = 1.0 - (1.0 / this.shuttle.approachTriggerAngularRadius * distanceToObstacle);
+                const distanceToObstacle = Math.abs(Math.atan2(
+                    Math.sin(this.shuttle.angle - this.obstacle.angle),
+                    Math.cos(this.shuttle.angle - this.obstacle.angle)
+                ));
+                this.collision.collides = (distanceToObstacle < this.obstacle.angularRadius);
+                this.shuttle.approachCircleRadius = distanceToObstacle * (this.shuttle.radius * 10);
+
+                if (distanceToObstacle > this.shuttle.approachTriggerAngularRadius) {
+                    this.shuttle.approachCircleOpacity = 0.0;
+                } else {
+                    this.shuttle.approachCircleOpacity = 1.0 - (1.0 / this.shuttle.approachTriggerAngularRadius * distanceToObstacle);
+                }
+
+                const timeRemaining = this.scoreboard.timeRemaining - deltaTime;
+                this.setTimeRemaining(timeRemaining);
+                if (timeRemaining < 0) {
+                    this.transitionToGameOverState();
+                }
+            } break;
+
+            case this.STATE_GAME_OVER: {} break;
         }
 
-        this.scoreboard.text = this.collision.collides ? 'collision' : 'no collision';
     }
 
     render(deltaTime) {
@@ -224,34 +333,39 @@ class Game
         );
         this.canvasCtx.stroke();
 
-        // Render obstacle
-        this.canvasCtx.fillStyle = this.obstacle.color.fill;
-        this.canvasCtx.strokeStyle = this.obstacle.color.border;
-        this.canvasCtx.beginPath();
-        this.canvasCtx.arc(
-            this.orbit.center.x + Math.cos(this.obstacle.angle) * this.orbit.radius,
-            this.orbit.center.y + Math.sin(this.obstacle.angle) * this.orbit.radius,
-            this.obstacle.radius,
-            0,
-            this.doublePi
-        );
-        this.canvasCtx.fill();
-        this.canvasCtx.stroke();
+        if (this.state !== this.STATE_INIT) {
+            // Render obstacle
+            this.canvasCtx.fillStyle = this.obstacle.color.fill;
+            this.canvasCtx.strokeStyle = this.obstacle.color.border;
+            this.canvasCtx.beginPath();
+            this.canvasCtx.arc(
+                this.orbit.center.x + Math.cos(this.obstacle.angle) * this.orbit.radius,
+                this.orbit.center.y + Math.sin(this.obstacle.angle) * this.orbit.radius,
+                this.obstacle.radius,
+                0,
+                this.doublePi
+            );
+            this.canvasCtx.fill();
+            this.canvasCtx.stroke();
+        }
 
-        // Render approach circle
-        this.canvasCtx.save();
-        this.canvasCtx.globalAlpha = this.shuttle.approachCircleOpacity;
-        this.canvasCtx.strokeStyle = this.shuttle.approachCircleColor;
-        this.canvasCtx.beginPath();
-        this.canvasCtx.arc(
-            this.orbit.center.x + Math.cos(this.shuttle.angle) * this.orbit.radius,
-            this.orbit.center.y + Math.sin(this.shuttle.angle) * this.orbit.radius,
-            this.shuttle.approachCircleRadius,
-            0,
-            this.doublePi
-        );
-        this.canvasCtx.stroke();
-        this.canvasCtx.restore();
+
+        if (this.state === this.STATE_RUNNING) {
+            // Render approach circle
+            this.canvasCtx.save();
+            this.canvasCtx.globalAlpha = this.shuttle.approachCircleOpacity;
+            this.canvasCtx.strokeStyle = this.shuttle.approachCircleColor;
+            this.canvasCtx.beginPath();
+            this.canvasCtx.arc(
+                this.orbit.center.x + Math.cos(this.shuttle.angle) * this.orbit.radius,
+                this.orbit.center.y + Math.sin(this.shuttle.angle) * this.orbit.radius,
+                this.shuttle.approachCircleRadius,
+                0,
+                this.doublePi
+            );
+            this.canvasCtx.stroke();
+            this.canvasCtx.restore();
+        }
 
         // Render shuttle
         this.canvasCtx.fillStyle = this.shuttle.color;
@@ -265,14 +379,32 @@ class Game
         );
         this.canvasCtx.fill();
 
-        // Render sample text
-        this.canvasCtx.font = this.scoreboard.fontStyle;
+        // Render scoreboard text
+        this.canvasCtx.font = this.scoreboard.fontStyleSecondary;
         this.canvasCtx.fillStyle = this.scoreboard.color;
         this.canvasCtx.textAlign = 'center';
         this.canvasCtx.fillText(
-            this.scoreboard.text,
+            this.scoreboard.text.top,
             this.scoreboard.position.x,
-            this.scoreboard.position.y
+            this.scoreboard.position.y + this.scoreboard.textOffsetY.top
+        );
+
+        this.canvasCtx.font = this.scoreboard.fontStylePrimary;
+        this.canvasCtx.fillStyle = this.scoreboard.color;
+        this.canvasCtx.textAlign = 'center';
+        this.canvasCtx.fillText(
+            this.scoreboard.text.middle,
+            this.scoreboard.position.x,
+            this.scoreboard.position.y + this.scoreboard.textOffsetY.middle
+        );
+
+        this.canvasCtx.font = this.scoreboard.fontStyleSecondary;
+        this.canvasCtx.fillStyle = this.scoreboard.color;
+        this.canvasCtx.textAlign = 'center';
+        this.canvasCtx.fillText(
+            this.scoreboard.text.bottom,
+            this.scoreboard.position.x,
+            this.scoreboard.position.y + this.scoreboard.textOffsetY.bottom
         );
 
     }
