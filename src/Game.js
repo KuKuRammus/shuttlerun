@@ -39,7 +39,7 @@ class Game
         angle: 0.0,
         initialSpeed: 50 * this.degreeToRadian,
         speed: 0,
-        speedIncrease: 2 * this.degreeToRadian,
+        speedIncrease: 1.5 * this.degreeToRadian,
         color: '#009fb7',
         approachTriggerAngularRadius: 0.0,
         approachCircleRadius: 0.0,
@@ -58,7 +58,7 @@ class Game
         color: '#272727',
         score: 0,
         timeRemaining: 0.0,
-        timeIncrement: 5.0,
+        timeIncrement: 1.5,
         text: {
             top: '',
             middle: '0',
