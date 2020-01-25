@@ -38,7 +38,10 @@ module.exports = {
     plugins: [
         new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
-            title: 'ShuttleRun Game'
+            title: 'ShuttleRun Game',
+            meta: {
+                viewport: 'width=device-width'
+            }
         }),
         new MiniCssExtractPlugin({
             filename: '[name].[contenthash].css'
