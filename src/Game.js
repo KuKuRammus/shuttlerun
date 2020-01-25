@@ -133,12 +133,25 @@ class Game
 
         // Create play field
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        rootElement.appendChild(canvas);
 
         // Save reference to drawing context
         this.canvasCtx = canvas.getContext('2d');
+
+        // Fix blurry image on screens with big dpi ratio
+        const dpr = window.devicePixelRatio || 1;
+        const bsr = this.canvasCtx.webkitBackingStorePixelRatio ||
+            this.canvasCtx.mozBackingStorePixelRatio ||
+            this.canvasCtx.msBackingStorePixelRatio ||
+            this.canvasCtx.oBackingStorePixelRatio ||
+            this.canvasCtx.backingStorePixelRatio || 1;
+        const pixelRatio = dpr / bsr;
+        canvas.width = width * pixelRatio;
+        canvas.height = height * pixelRatio;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        this.canvasCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+        rootElement.appendChild(canvas);
 
         // Calculate orbit position and diameter
         this.orbit.center.x = Math.round(width / 2);
