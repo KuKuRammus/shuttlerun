@@ -247,22 +247,9 @@ class Game
         event.stopPropagation();
         if (!event.repeat) {
             switch (event.code) {
-                case 'ArrowUp': {
-                    this.shuttle.speed += 5 * this.degreeToRadian;
-                } break;
-
-                case 'ArrowDown': {
-                    this.shuttle.speed -= 5 * this.degreeToRadian;
-                } break;
-
                 case 'Space': {
                     // Temp collision check
                     this.handleInputHit()
-                } break;
-
-                case 'KeyO': {
-                    // Regenerate obstacle
-                    this.regenerateObstacle();
                 } break;
             }
         }
