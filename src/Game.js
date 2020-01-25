@@ -1,3 +1,11 @@
+import { Howl, Howler } from 'howler'
+
+// Resources / Audio
+import audioClickHit from './resources/audio/click_hit.mp3'
+import audioClickMiss from './resources/audio/click_miss.mp3'
+import audioGameStart from './resources/audio/game_start.mp3'
+import audioGameOver from './resources/audio/game_over.mp3'
+
 class Game
 {
 
@@ -97,6 +105,17 @@ class Game
         }
     };
 
+    // Audio resource
+    audio = {
+        list: {
+            gameStart: null,
+            clickHit: null,
+            clickMiss: null,
+            gameOver: null
+        },
+        volume: 0.5
+    };
+
     normalizeRadianAngle(angle) {
         if (angle > this.doublePi) {
             return angle % this.doublePi;
@@ -145,6 +164,12 @@ class Game
         this.obstacle.radius = this.orbit.radius * 0.142;
         this.obstacle.angularRadius = Math.atan((this.obstacle.radius * 2) / this.orbit.radius) * 0.6;
 
+        // Load sounds
+        this.audio.list.gameStart = new Howl({ src: [audioGameStart], volume: this.audio.volume });
+        this.audio.list.clickHit = new Howl({ src: [audioClickHit], volume: this.audio.volume });
+        this.audio.list.clickMiss = new Howl({ src: [audioClickMiss], volume: this.audio.volume });
+        this.audio.list.gameOver = new Howl({ src: [audioGameOver], volume: this.audio.volume });
+
         this.transitionToInitState();
 
         // Register handle for keyboard events
@@ -182,10 +207,16 @@ class Game
 
                     // Increase speed
                     this.shuttle.speed += this.shuttle.speedIncrease;
+
+                    // Play feedback sound
+                    this.audio.list.clickHit.play();
+                } else {
+                    this.audio.list.clickMiss.play();
                 }
             } break;
 
             case this.STATE_GAME_OVER: {
+                this.audio.list.gameStart.play();
                 this.transitionToInitState();
             } break;
 
@@ -225,6 +256,7 @@ class Game
         this.state = this.STATE_INIT;
         this.scoreboard.text.top = this.text.scoreboard.init;
         this.shuttle.angle = Math.PI / 2;
+        this.shuttle.direction = -1;
         this.setTimeRemaining(15.0);
         this.setScore(0)
     }
@@ -234,12 +266,14 @@ class Game
         this.shuttle.speed = this.shuttle.initialSpeed;
         this.regenerateObstacle();
         this.scoreboard.text.top = this.text.scoreboard.running;
+        this.audio.list.gameStart.play();
     }
 
     transitionToGameOverState() {
         this.state = this.STATE_GAME_OVER;
         this.scoreboard.text.top = this.text.scoreboard.gameOver;
         this.shuttle.speed = 0.0;
+        this.audio.list.gameOver.play();
     }
 
     handleKeydownEvent(event) {
