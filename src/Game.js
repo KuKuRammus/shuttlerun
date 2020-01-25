@@ -32,6 +32,10 @@ class Game
         angle: 0.0,
         speed: 0,
         color: '#009fb7',
+        approachTriggerAngularRadius: 0.0,
+        approachCircleRadius: 0.0,
+        approachCircleOpacity: 0.5,
+        approachCircleColor: '#009fb7',
     };
 
     // Scoreboard
@@ -43,7 +47,8 @@ class Game
         fontStyle: '',
         color: '#272727',
         text: '',
-        score: 0
+        score: 0.0,
+        perfectHitScore: 300
     };
 
     // Internal stopwatch
@@ -59,6 +64,11 @@ class Game
         angle: 0.0,
         angularRadius: 0.0,
         minimalOffsetFromShuttle: Math.PI / 2.5
+    };
+
+    // Collision
+    collision = {
+        collides: false
     };
 
     normalizeRadianAngle(angle) {
@@ -94,6 +104,7 @@ class Game
         // Calculate shuttle size (+ angular size) and set initial position
         this.shuttle.angle = 90.0 * this.degreeToRadian;
         this.shuttle.radius = Math.round((width * 0.063) / 2);
+        this.shuttle.approachTriggerAngularRadius = Maxth.atan((this.shuttle.radius * 2) / this.shuttle.radius) / 2.5;
         this.setShuttleSpeed(30);
 
         // Calculate scoreboard position
@@ -146,7 +157,11 @@ class Game
                 } break;
 
                 case 'KeyX': {
-                    // TODO
+                    // Temp collision check
+                    if (this.collision.collides) {
+                        this.shuttle.direction *= -1;
+                        this.regenerateObstacle();
+                    }
                 } break;
 
                 case 'KeyO': {
@@ -176,14 +191,20 @@ class Game
         const angleFrameChange = this.shuttle.speed * deltaTime * this.shuttle.direction;
         this.shuttle.angle = this.normalizeRadianAngle(this.shuttle.angle + angleFrameChange);
 
-        // Temp collision check
-        const distanceToObstacle = Math.abs(this.shuttle.angle - this.obstacle.angle) + Math.abs(angleFrameChange);
-        if (distanceToObstacle < this.obstacle.angularRadius) {
-            this.scoreboard.text = `+c (${(this.shuttle.speed * this.radianToDegree).toFixed(2)})`;
+        const distanceToObstacle = Math.abs(Math.atan2(
+            Math.sin(this.shuttle.angle - this.obstacle.angle),
+            Math.cos(this.shuttle.angle - this.obstacle.angle)
+        ));
+        this.collision.collides = (distanceToObstacle < this.obstacle.angularRadius);
+        this.shuttle.approachCircleRadius = distanceToObstacle * (this.shuttle.radius * 10);
+
+        if (distanceToObstacle > this.shuttle.approachTriggerAngularRadius) {
+            this.shuttle.approachCircleOpacity = 0.0;
         } else {
-            this.scoreboard.text = `-c (${(this.shuttle.speed * this.radianToDegree).toFixed(2)})`;
+            this.shuttle.approachCircleOpacity = 1.0 - (1.0 / this.shuttle.approachTriggerAngularRadius * distanceToObstacle);
         }
 
+        this.scoreboard.text = this.collision.collides ? 'collision' : 'no collision';
     }
 
     render(deltaTime) {
@@ -216,6 +237,21 @@ class Game
         );
         this.canvasCtx.fill();
         this.canvasCtx.stroke();
+
+        // Render approach circle
+        this.canvasCtx.save();
+        this.canvasCtx.globalAlpha = this.shuttle.approachCircleOpacity;
+        this.canvasCtx.strokeStyle = this.shuttle.approachCircleColor;
+        this.canvasCtx.beginPath();
+        this.canvasCtx.arc(
+            this.orbit.center.x + Math.cos(this.shuttle.angle) * this.orbit.radius,
+            this.orbit.center.y + Math.sin(this.shuttle.angle) * this.orbit.radius,
+            this.shuttle.approachCircleRadius,
+            0,
+            this.doublePi
+        );
+        this.canvasCtx.stroke();
+        this.canvasCtx.restore();
 
         // Render shuttle
         this.canvasCtx.fillStyle = this.shuttle.color;
