@@ -127,7 +127,7 @@ class Game
 
     constructor() {}
 
-    init(width, height, rootElement) {
+    init(width, height, rootElement, isMobileDevice) {
         this.canvasWidth = width;
         this.canvasHeight = height;
 
@@ -142,7 +142,7 @@ class Game
 
         // Calculate orbit position and diameter
         this.orbit.center.x = Math.round(width / 2);
-        this.orbit.center.y = Math.round(height * 0.3);
+        this.orbit.center.y = Math.round(height * (isMobileDevice ? 0.3 : 0.45));
         this.orbit.radius = Math.round((width * 0.7) / 2);
         this.orbit.thickness = Math.ceil(this.orbit.radius * 0.0157);
 
@@ -172,11 +172,16 @@ class Game
 
         this.transitionToInitState();
 
-        // Register handle for keyboard events
-        window.addEventListener('keydown', this.handleKeydownEvent.bind(this));
+        if (isMobileDevice) {
+            // Register touch listener
+            window.addEventListener('touchstart', this.handleTouchClick.bind(this));
+        } else {
+            // Register handle for keyboard events
+            window.addEventListener('keydown', this.handleKeydownEvent.bind(this));
 
-        // Register handle for keyboard events
-        window.addEventListener('mousedown', this.handleMouseClick.bind(this));
+            // Register handle for keyboard events
+            window.addEventListener('mousedown', this.handleMouseClick.bind(this));
+        }
     }
 
     setShuttleSpeed(degree) {
@@ -221,6 +226,10 @@ class Game
             } break;
 
         }
+    }
+
+    handleTouchClick() {
+        this.handleInputHit();
     }
 
     handleMouseClick(event) {
